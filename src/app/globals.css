@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/* Identidade visual Actum Precatórios — extraída de actumprecatorios.com.br */
+@theme {
+  --color-ink: #122036;
+  --color-ink-2: #1b2f4b;
+  --color-paper: #f7f5f0;
+  --color-paper-2: #ede9df;
+  --color-gold: #a58540;
+  --color-gold-deep: #6e592b;
+  --color-gold-light: #dac7a0;
+  --color-gold-hover: #ba984f;
+  --color-slate: #333d52;
+  --color-slate-soft: #515b70;
+  --color-sage: #35513f;
+
+  --font-sans: var(--font-poppins), "Poppins", sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-slate);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Entrada de cada tela do formulário */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-step-in {
+  animation: step-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-step-in {
+    animation: none;
+  }
+}
