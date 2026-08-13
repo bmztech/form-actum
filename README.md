@@ -179,6 +179,35 @@ Em perguntas de múltipla escolha, o usuário pode responder apertando as
 teclas `A`–`F` (mapeadas para as opções na ordem em que aparecem), além de
 clicar. É um detalhe de UX para agilizar o preenchimento em desktop.
 
+### 8. Pixel da Meta (Facebook Ads)
+
+O site carrega o "código de base" padrão do Pixel da Meta direto no
+`<body>`, via `next/script` ([src/app/layout.tsx](src/app/layout.tsx)) — o
+mesmo trecho gerado pelo Gerenciador de Eventos em **Configure um Pixel da
+Meta → Copiar código de base**. Ele dispara automaticamente o evento
+`PageView` a cada carregamento de página (inclui fallback `<noscript>` com
+pixel de imagem para quem tem JS desabilitado).
+
+O ID do pixel fica isolado em `META_PIXEL_ID`
+([src/lib/config.ts](src/lib/config.ts)) — é o único lugar que precisa ser
+editado para trocar de pixel:
+
+```ts
+// src/lib/config.ts
+export const META_PIXEL_ID = "1234567890123456"; // exemplo — troque pelo ID real do seu Pixel
+```
+
+> O valor acima é só um exemplo de formato (16 dígitos), não é um ID válido.
+> Pegue o ID real em **Gerenciador de Eventos da Meta → Conectar fontes de
+> dados → Web → seu Pixel → Copiar código de base** — ele aparece dentro da
+> chamada `fbq('init', '...')` do trecho copiado.
+
+Além do `PageView` automático, [trackPixelEvent](src/lib/pixel.ts)
+(wrapper de `window.fbq("track", event)`) dispara o evento `Lead` no clique
+do botão final "Falar com a Actum agora"
+([Funnel.tsx](src/components/Funnel.tsx)) — esse é o evento de conversão a
+ser otimizado nas campanhas do Meta Ads.
+
 ## Arquitetura
 
 ```

@@ -14,6 +14,13 @@ export const WHATSAPP_NUMBER = "554268250720";
 /** Site institucional (rodapé e CTA da tela de desqualificação). */
 export const SITE_URL = "https://actumprecatorios.com.br/";
 
+/**
+ * ID do Pixel do Meta Ads (formulário Actum Precatórios).
+ * Não é um dado sensível (fica visível no HTML de qualquer página) — o valor
+ * padrão abaixo cobre quem não tiver NEXT_PUBLIC_META_PIXEL_ID no .env.local.
+ */
+export const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1747237356474748";
+
 /** Parâmetros de rastreamento capturados da URL e enviados na mensagem. */
 export const TRACKING_PARAMS = [
   "utm_source",

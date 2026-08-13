@@ -36,7 +36,7 @@ export type Step = Base &
   (
     | {
         id: string;
-        kind: "text" | "phone";
+        kind: "text" | "phone" | "name";
         question: QuestionText;
         placeholder: string;
         helper?: string;
@@ -138,7 +138,7 @@ export const STEPS: Step[] = [
   // Etapa 6 — Captura de contato
   {
     id: "nome",
-    kind: "text",
+    kind: "name",
     summaryLabel: "Nome",
     question: "Para finalizar, qual é o seu nome completo?",
     placeholder: "Digite seu nome completo",

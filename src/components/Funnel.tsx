@@ -24,10 +24,13 @@ import {
   type Answers,
   type Step,
 } from "@/lib/form";
+import { trackPixelEvent } from "@/lib/pixel";
 import { markSubmitted, useHasSubmitted } from "@/lib/submission-status";
 import {
   buildWhatsAppUrl,
+  isValidName,
   isValidPhone,
+  maskName,
   maskPhone,
   readTracking,
   type Tracking,
@@ -105,6 +108,9 @@ export default function Funnel() {
         setError("Digite um WhatsApp válido com DDD.");
         return;
       }
+    } else if (step.kind === "name" && !isValidName(value)) {
+      setError("Digite um nome válido.");
+      return;
     } else if (step.kind === "text" && !step.optional && value.length < 2) {
       setError("Por favor, preencha este campo.");
       return;
@@ -182,7 +188,13 @@ export default function Funnel() {
               value={draft}
               placeholder={step.placeholder}
               onChange={(e) => {
-                setDraft(step.kind === "phone" ? maskPhone(e.target.value) : e.target.value);
+                const value =
+                  step.kind === "phone"
+                    ? maskPhone(e.target.value)
+                    : step.kind === "name"
+                      ? maskName(e.target.value)
+                      : e.target.value;
+                setDraft(value);
                 setError(null);
               }}
               onKeyDown={(e) => {
@@ -356,7 +368,10 @@ function Done({ url }: { url: string }) {
 
       <a
         href={url}
-        onClick={() => markSubmitted()}
+        onClick={() => {
+          trackPixelEvent("Lead");
+          markSubmitted();
+        }}
         className="mt-7 inline-flex w-full items-center justify-center rounded-[3px] bg-gold px-8 py-4 text-lg font-semibold text-ink transition-colors hover:bg-gold-hover focus:outline-none focus-visible:ring-3 focus-visible:ring-gold/40 sm:w-auto"
       >
         Falar com a Actum agora
