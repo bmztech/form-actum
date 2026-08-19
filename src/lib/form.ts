@@ -7,7 +7,9 @@
  *   Etapa 3 (relacao)   -> "herdeiro" abre a sub-pergunta (inventario)
  *   Etapa 4 (valor)
  *   Etapa 5 (objetivo)
- *   Etapa 6 (nome, telefone, processo — processo é opcional)
+ *   Etapa 6 (estado, nome, telefone, processo)
+ *     - estado "outro" abre a sub-pergunta (estado_outro)
+ *     - processo é opcional
  *
  * Para mudar perguntas, opções ou o encadeamento condicional, edite só o
  * array STEPS abaixo:
@@ -48,6 +50,8 @@ export type Step = Base &
         kind: "choice";
         question: QuestionText;
         options: Choice[];
+        /** "grid" — lista longa em duas colunas, sem atalho de teclado. */
+        layout?: "grid";
         next: string | ((value: string) => string);
       }
   );
@@ -133,9 +137,39 @@ export const STEPS: Step[] = [
       { value: "comparar", label: "Quero apenas comparar propostas e entender quanto receberia" },
       { value: "planejar", label: "Quero planejar uma antecipação para os próximos meses" },
     ],
+    next: "estado",
+  },
+  // Etapa 6 — Localização e captura de contato
+  {
+    id: "estado",
+    kind: "choice",
+    summaryLabel: "Estado",
+    question: "Qual é o seu estado?",
+    layout: "grid",
+    options: [
+      { value: "sp", label: "São Paulo (SP)" },
+      { value: "rj", label: "Rio de Janeiro (RJ)" },
+      { value: "mg", label: "Minas Gerais (MG)" },
+      { value: "pr", label: "Paraná (PR)" },
+      { value: "rs", label: "Rio Grande do Sul (RS)" },
+      { value: "sc", label: "Santa Catarina (SC)" },
+      { value: "ba", label: "Bahia (BA)" },
+      { value: "go", label: "Goiás (GO)" },
+      { value: "pe", label: "Pernambuco (PE)" },
+      { value: "df", label: "Distrito Federal (DF)" },
+      { value: "outro", label: "Outro estado" },
+    ],
+    next: (v) => (v === "outro" ? "estado_outro" : "nome"),
+  },
+  // Sub-pergunta — só aparece quando estado = outro
+  {
+    id: "estado_outro",
+    kind: "text",
+    summaryLabel: "Estado informado",
+    question: "Qual é o seu estado?",
+    placeholder: "Digite o nome do seu estado",
     next: "nome",
   },
-  // Etapa 6 — Captura de contato
   {
     id: "nome",
     kind: "name",
@@ -180,11 +214,18 @@ export function questionOf(step: Step, answers: Answers): string {
 }
 
 /**
- * Total exato de perguntas do caminho que o lead está percorrendo.
- * Só o step "relacao" altera o tamanho do funil (herdeiro ganha a
- * sub-pergunta extra sobre o inventário).
+ * Sub-perguntas que existem só em algumas ramificações — ficam fora da
+ * contagem base e entram no total apenas quando a condição é verdadeira.
  */
+const BRANCH_STEPS: Record<string, (answers: Answers) => boolean> = {
+  inventario: (a) => a.relacao === "herdeiro",
+  estado_outro: (a) => a.estado === "outro",
+};
+
+/** Total exato de perguntas do caminho que o lead está percorrendo. */
 export function pathTotal(answers: Answers): number {
-  const base = STEPS.filter((s) => s.id !== "inventario").length;
-  return answers.relacao === "herdeiro" ? base + 1 : base;
+  const branchIds = Object.keys(BRANCH_STEPS);
+  const base = STEPS.filter((s) => !branchIds.includes(s.id)).length;
+  const extra = branchIds.filter((id) => BRANCH_STEPS[id](answers)).length;
+  return base + extra;
 }

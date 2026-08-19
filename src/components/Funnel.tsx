@@ -6,7 +6,8 @@
  * Roteiro (ver "Arquitetura do Formulário Actum"):
  *   situacao -> [em andamento: desqualifica]
  *            -> devedor -> relacao -> [herdeiro: inventario] -> valor
- *            -> objetivo -> nome -> telefone -> processo (opcional) -> WhatsApp
+ *            -> objetivo -> estado -> [outro: estado_outro] -> nome
+ *            -> telefone -> processo (opcional) -> WhatsApp
  *
  * Depois que o lead cai na tela de desqualificação, não dá pra reabrir o
  * funil a partir dali — só pode ir para o site institucional.
@@ -133,6 +134,7 @@ export default function Funnel() {
 
   useEffect(() => {
     if (screen !== "question" || step?.kind !== "choice") return;
+    if (step.layout === "grid") return;
 
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -163,7 +165,13 @@ export default function Funnel() {
         </h2>
 
         {step.kind === "choice" ? (
-          <div className="mt-8 space-y-3">
+          <div
+            className={
+              step.layout === "grid"
+                ? "mt-8 grid gap-3 sm:grid-cols-2"
+                : "mt-8 space-y-3"
+            }
+          >
             {step.options.map((option, i) => (
               <button
                 key={option.value}
@@ -171,9 +179,11 @@ export default function Funnel() {
                 onClick={() => answer(option.value)}
                 className="group flex w-full items-center gap-3 rounded-lg border-2 border-paper-2 bg-white px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-gold hover:shadow-md focus:outline-none focus-visible:border-gold focus-visible:ring-3 focus-visible:ring-gold/25"
               >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-paper text-xs font-bold text-slate-soft transition-colors group-hover:bg-gold group-hover:text-white">
-                  {LETTERS[i]}
-                </span>
+                {step.layout !== "grid" && (
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-paper text-xs font-bold text-slate-soft transition-colors group-hover:bg-gold group-hover:text-white">
+                    {LETTERS[i]}
+                  </span>
+                )}
                 <span className="text-base font-medium text-ink">{option.label}</span>
               </button>
             ))}
@@ -184,7 +194,9 @@ export default function Funnel() {
               ref={inputRef}
               type={step.kind === "phone" ? "tel" : "text"}
               inputMode={step.kind === "phone" ? "tel" : "text"}
-              autoComplete={step.kind === "phone" ? "tel-national" : "name"}
+              autoComplete={
+                step.kind === "phone" ? "tel-national" : step.kind === "name" ? "name" : "off"
+              }
               value={draft}
               placeholder={step.placeholder}
               onChange={(e) => {
@@ -227,7 +239,7 @@ export default function Funnel() {
           </div>
         )}
 
-        {step.kind === "choice" && (
+        {step.kind === "choice" && step.layout !== "grid" && (
           <p className="mt-6 hidden text-xs text-slate-soft sm:block">
             Dica: use as teclas {step.options.map((_, i) => LETTERS[i]).join(", ")} para responder
             mais rápido.

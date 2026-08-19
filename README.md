@@ -59,6 +59,11 @@ situacao ──"andamento"──► disqualified (fim, sem captura)
                                                                         objetivo
                                                                             │
                                                                             ▼
+                                                                         estado
+                                                                            │
+                                            ┌───"outro"───► estado_outro ───┤
+                                            └───(estado da lista)───────────┤
+                                                                            ▼
                                                                           nome
                                                                             │
                                                                             ▼
@@ -84,7 +89,14 @@ situacao ──"andamento"──► disqualified (fim, sem captura)
    para `valor`.
 4. **valor** — faixa de valor aproximado do precatório.
 5. **objetivo** — intenção do lead (urgência, comparar propostas, planejar).
-6. **nome**, **telefone**, **processo** — captura de contato. `processo`
+6. **estado** — em qual estado o lead está, com os dez estados de maior
+   volume na lista (SP, RJ, MG, PR, RS, SC, BA, GO, PE, DF) e a opção
+   **"Outro estado"**, que abre a sub-pergunta **estado_outro** (campo de
+   texto livre para o lead escrever o estado). Como a lista é longa, esse
+   step usa `layout: "grid"` — duas colunas no desktop e sem atalho de
+   teclado (as letras A–F só fazem sentido em listas curtas). Não
+   desqualifica ninguém.
+7. **nome**, **telefone**, **processo** — captura de contato. `processo`
    (nº do processo ou CPF do titular) é **opcional**; o helper no formulário
    avisa que preencher acelera a análise, mas o funil não trava se ficar em
    branco.
@@ -102,16 +114,20 @@ tem:
 - `hideInSummary` → some do resumo da mensagem mesmo tendo sido respondido.
 - `optional` (só em steps de texto) → o botão de continuar vira "Pular esta
   etapa" quando o campo está vazio.
+- `layout: "grid"` (só em steps de escolha) → opções em duas colunas, sem
+  badge de letra nem atalho de teclado (para listas longas, como `estado`).
 
 Os ids **`"disqualified"`** e **`"submit"`** são reservados pelo motor do
 funil ([Funnel.tsx](src/components/Funnel.tsx)) e não devem ser reusados
 como id de uma pergunta normal.
 
 `pathTotal()` calcula quantas perguntas existem no caminho atual (para a
-barra de progresso) — hoje o único step que muda o tamanho do funil é
-`relacao` quando a resposta é `"herdeiro"` (soma +1 pela `inventario`). Se
-uma nova ramificação condicional for adicionada e ela também mudar a
-quantidade de perguntas do caminho, essa função precisa ser atualizada.
+barra de progresso). As sub-perguntas condicionais ficam declaradas no mapa
+`BRANCH_STEPS` em [src/lib/form.ts](src/lib/form.ts) — hoje `inventario`
+(quando `relacao = "herdeiro"`) e `estado_outro` (quando
+`estado = "outro"`): elas saem da contagem base e voltam +1 cada quando a
+condição é verdadeira. Ao criar uma nova ramificação que mude a quantidade
+de perguntas do caminho, basta adicionar uma entrada nesse mapa.
 
 ### 3. Desqualificação é definitiva
 
