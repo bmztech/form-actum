@@ -11,7 +11,25 @@
  */
 export const WHATSAPP_NUMBER = "554268250720";
 
-/** Site institucional (rodapé e CTA da tela de desqualificação). */
+/**
+ * Número que recebe a lista de nutrição (Mensagem A: processo em andamento ou
+ * com recurso). Esses contatos NÃO devem cair na fila comercial.
+ * TODO: trocar pelo número da nutrição quando a Actum definir — até lá usa o
+ * comercial, e a mensagem chega marcada com [NUTRIÇÃO].
+ */
+export const NURTURE_WHATSAPP_NUMBER = WHATSAPP_NUMBER;
+
+/**
+ * Faixa de valor aceita (Etapa 4). O teto é o da RPV federal: 60 salários
+ * mínimos, calculado sobre o valor bruto.
+ * ATUALIZAÇÃO ANUAL OBRIGATÓRIA: troque SALARIO_MINIMO todo mês de janeiro.
+ * As opções da Pergunta 4 e a Mensagem E são geradas a partir destes valores.
+ */
+export const SALARIO_MINIMO = 1621; // 2026
+export const RPV_TETO = 60 * SALARIO_MINIMO; // R$ 97.260 em 2026
+export const VALOR_MINIMO = 5000;
+
+/** Site institucional (rodapé e CTA das telas de encerramento). */
 export const SITE_URL = "https://actumprecatorios.com.br/";
 
 /**

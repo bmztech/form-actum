@@ -44,103 +44,40 @@ lead enviando a mensagem do WhatsApp.
 
 ### 2. O funil (perguntas e ordem)
 
-Definido de forma **declarativa** em [src/lib/form.ts](src/lib/form.ts), no
-array `STEPS`. Ordem e ramificações:
+Definido de forma **declarativa** em [src/lib/funnel/steps.ts](src/lib/funnel/steps.ts)
+(array `STEPS`), seguindo o documento "Formulário de Qualificação de Leads —
+Actum" (08/10/2026). O perfil aceito é: crédito **federal** (INSS ou União),
+pago por **RPV**, com **decisão definitiva** e **ainda não pago**.
 
-```
-situacao ──"andamento"──► disqualified (fim, sem captura)
-   │
-   └─(demais respostas)──► devedor ──► relacao
-                                          │
-                                          ├─"herdeiro"──► inventario ──► valor
-                                          └─(demais)────────────────────► valor
-                                                                            │
-                                                                            ▼
-                                                                        objetivo
-                                                                            │
-                                                                            ▼
-                                                                         estado
-                                                                            │
-                                            ┌───"outro"───► estado_outro ───┤
-                                            └───(estado da lista)───────────┤
-                                                                            ▼
-                                                                          nome
-                                                                            │
-                                                                            ▼
-                                                                        telefone
-                                                                            │
-                                                                            ▼
-                                                              processo (opcional)
-                                                                            │
-                                                                            ▼
-                                                                         submit
-```
+| Etapa | Step | Encerra quando |
+| --- | --- | --- |
+| 1 | `situacao` | Recurso ou processo em andamento (Mensagem A + nutrição); valor já recebido (F) |
+| 2 | `devedor` | Estado, Prefeitura, banco ou empresa (B) |
+| 3 | `relacao` (+ `habilitacao` para herdeiro/cônjuge) | Tutor ou curador de menor/incapaz (C) |
+| 4 | `valor` | Abaixo de R$ 5.000 (D) ou acima do teto da RPV (E) — ambas deixam corrigir o valor |
+| 5 | `objetivo` | — |
+| 6 | `nome`, `telefone`, `estado`, `processo` (opcional), `aceites` | — |
 
-1. **situacao** — situação do processo judicial. Se a resposta for
-   `"andamento"` (processo ainda em andamento, sem precatório expedido), o
-   lead é **desqualificado** — a Actum só antecipa créditos já reconhecidos
-   pela Justiça (precatório expedido ou aguardando expedição).
-2. **devedor** — quem deve o crédito (federal, estadual, municipal). Usado
-   só para contexto/qualificação, não desqualifica ninguém.
-3. **relacao** — vínculo do lead com o crédito (titular, herdeiro, advogado).
-   Se `"herdeiro"`, abre a sub-pergunta **inventario** (existe partilha
-   homologada?) antes de seguir — é um dado importante para a análise
-   jurídica de créditos herdados. Para as demais respostas, pula direto
-   para `valor`.
-4. **valor** — faixa de valor aproximado do precatório.
-5. **objetivo** — intenção do lead (urgência, comparar propostas, planejar).
-6. **estado** — em qual estado o lead está, com os dez estados de maior
-   volume na lista (SP, RJ, MG, PR, RS, SC, BA, GO, PE, DF) e a opção
-   **"Outro estado"**, que abre a sub-pergunta **estado_outro** (campo de
-   texto livre para o lead escrever o estado). Como a lista é longa, esse
-   step usa `layout: "grid"` — duas colunas no desktop e sem atalho de
-   teclado (as letras A–F só fazem sentido em listas curtas). Não
-   desqualifica ninguém.
-7. **nome**, **telefone**, **processo** — captura de contato. `processo`
-   (nº do processo ou CPF do titular) é **opcional**; o helper no formulário
-   avisa que preencher acelera a análise, mas o funil não trava se ficar em
-   branco.
+"Não sei" sempre segue: a Pré-análise confirma no processo. O porquê de cada
+pergunta e o texto de cada mensagem estão em
+[docs/perguntas.md](docs/perguntas.md).
 
-Depois de `processo`, o `next` é o id reservado `"submit"`, que dispara a
-montagem da mensagem e a tela final de WhatsApp (não existe um step com esse
-id em `STEPS`).
+### 3. Telas de encerramento
 
-**Como adicionar/editar perguntas:** mexa só no array `STEPS`. Cada step
-tem:
-- `next` como **string** → sempre vai para aquele id.
-- `next` como **função** `(value) => id` → ramificação condicional a partir
-  da resposta atual (é assim que `situacao` e `relacao` funcionam).
-- `summaryLabel` → rótulo usado na mensagem de WhatsApp final.
-- `hideInSummary` → some do resumo da mensagem mesmo tendo sido respondido.
-- `optional` (só em steps de texto) → o botão de continuar vira "Pular esta
-  etapa" quando o campo está vazio.
-- `layout: "grid"` (só em steps de escolha) → opções em duas colunas, sem
-  badge de letra nem atalho de teclado (para listas longas, como `estado`).
+As Mensagens A a F ficam em [src/lib/funnel/endings.ts](src/lib/funnel/endings.ts).
+Um step encerra o funil devolvendo `endingId("X")` no `next`. Quem cai numa
+delas não vai para a fila comercial. Só D e E deixam voltar ao funil (botão
+"Corrigir o valor informado"); o valor anterior vai na mensagem final. A
+Mensagem A oferece opt-in para a lista de nutrição, enviada por WhatsApp para
+`NURTURE_WHATSAPP_NUMBER` com a marca `[NUTRIÇÃO]`.
 
-Os ids **`"disqualified"`** e **`"submit"`** são reservados pelo motor do
-funil ([Funnel.tsx](src/components/Funnel.tsx)) e não devem ser reusados
-como id de uma pergunta normal.
-
-`pathTotal()` calcula quantas perguntas existem no caminho atual (para a
-barra de progresso). As sub-perguntas condicionais ficam declaradas no mapa
-`BRANCH_STEPS` em [src/lib/form.ts](src/lib/form.ts) — hoje `inventario`
-(quando `relacao = "herdeiro"`) e `estado_outro` (quando
-`estado = "outro"`): elas saem da contagem base e voltam +1 cada quando a
-condição é verdadeira. Ao criar uma nova ramificação que mude a quantidade
-de perguntas do caminho, basta adicionar uma entrada nesse mapa.
-
-### 3. Desqualificação é definitiva
-
-Uma vez que o lead cai na tela de desqualificação (`Disqualified`), **não
-há como reabrir o funil a partir dali** — a única ação disponível é ir para
-o site institucional (`SITE_URL`). Isso é intencional: só vale a pena falar
-com quem já tem o crédito judicial definido (expedido ou aguardando
-expedição), processos "em andamento" ainda não são elegíveis para
-antecipação.
+O teto da RPV é 60 × `SALARIO_MINIMO` ([src/lib/config.ts](src/lib/config.ts)).
+**Atualize o salário mínimo todo mês de janeiro** — as opções de valor e a
+Mensagem E são geradas a partir dele.
 
 ### 4. Entrega do lead via WhatsApp (sem backend)
 
-Ao terminar o funil, [buildWhatsAppUrl](src/lib/whatsapp.ts) monta um link
+Ao terminar o funil, [buildWhatsAppUrl](src/lib/whatsapp/message.ts) monta um link
 `https://wa.me/<numero>?text=<mensagem>` com:
 
 - Uma primeira linha de resumo (`buildHeadline`) — devedor + faixa de valor,
@@ -161,7 +98,7 @@ editado para trocar o número.
 
 ### 5. Rastreamento de campanhas (UTM)
 
-[readTracking()](src/lib/whatsapp.ts) captura, na URL de entrada, os
+[readTracking()](src/lib/tracking/utm.ts) captura, na URL de entrada, os
 parâmetros listados em `TRACKING_PARAMS`
 ([src/lib/config.ts](src/lib/config.ts)): `utm_source`, `utm_medium`,
 `utm_campaign`, `utm_content`, `utm_term`, `fbclid`, `gclid` — mais
@@ -179,7 +116,7 @@ Para rastrear uma nova origem/parâmetro, basta adicionar a chave em
 ### 6. Não repetir o funil (dedupe local)
 
 Depois que o lead clica em "Falar com a Actum agora" na tela final,
-[markSubmitted()](src/lib/submission-status.ts) grava `actum_submitted=1`
+[markSubmitted()](src/lib/submission/status.ts) grava `actum_submitted=1`
 no `localStorage`. Se a mesma pessoa (mesmo navegador) voltar a abrir o
 link do formulário, a tela inicial mostra um agradecimento
 (`AlreadySubmitted`) em vez do funil, para não fazer o lead responder tudo
@@ -192,7 +129,7 @@ no CRM/atendimento, só evita fricção óbvia com quem reabre o mesmo link.
 ### 7. Atalhos de teclado
 
 Em perguntas de múltipla escolha, o usuário pode responder apertando as
-teclas `A`–`F` (mapeadas para as opções na ordem em que aparecem), além de
+teclas `A`, `B`, `C`… (mapeadas para as opções na ordem em que aparecem), além de
 clicar. É um detalhe de UX para agilizar o preenchimento em desktop.
 
 ### 8. Pixel da Meta (Facebook Ads)
@@ -218,7 +155,7 @@ export const META_PIXEL_ID = "1234567890123456"; // exemplo — troque pelo ID r
 > dados → Web → seu Pixel → Copiar código de base** — ele aparece dentro da
 > chamada `fbq('init', '...')` do trecho copiado.
 
-Além do `PageView` automático, [trackPixelEvent](src/lib/pixel.ts)
+Além do `PageView` automático, [trackPixelEvent](src/lib/tracking/pixel.ts)
 (wrapper de `window.fbq("track", event)`) dispara o evento `Lead` no clique
 do botão final "Falar com a Actum agora"
 ([Funnel.tsx](src/components/Funnel.tsx)) — esse é o evento de conversão a
@@ -234,34 +171,47 @@ src/
     globals.css      – tema Tailwind (cores "gold", "ink", "paper" etc.)
   components/
     Funnel.tsx       – motor do funil: estado, navegação, telas (intro,
-                       pergunta, desqualificado, concluído, já enviado)
+                       pergunta, encerramento A–F, concluído, já enviado)
   lib/
-    form.ts           – definição declarativa das perguntas (STEPS) e
-                       helpers de navegação/resumo
-    whatsapp.ts        – tracking de UTM, montagem da mensagem e do link
-                       wa.me, máscara/validação de telefone
-    submission-status.ts – flag local de "já enviou" (localStorage)
-    config.ts          – único lugar com número de WhatsApp, URL do site
-                       institucional e lista de parâmetros de tracking
+    config.ts          – único lugar com números de WhatsApp (comercial e
+                         nutrição), URL do site, pixel, salário mínimo/teto da
+                         RPV/valor mínimo e parâmetros de tracking
+    funnel/            – o questionário
+      types.ts         – formato de um step e de uma tela de encerramento
+      steps.ts         – perguntas (STEPS), sub-perguntas, etiquetas da mensagem
+      endings.ts       – telas de encerramento (Mensagens A a F)
+      navigation.ts    – motor puro: próximo step, rótulos, total do caminho
+      validation.ts    – erro de validação de cada tipo de campo
+    format/            – formatação de valores em reais
+    input/             – máscara e validação de nome e telefone
+    tracking/          – UTMs (utm.ts) e Meta Pixel (pixel.ts)
+    whatsapp/          – montagem da mensagem e do link wa.me (message.ts)
+    submission/        – flag local de "já enviou" (status.ts)
 ```
 
-Ideia central: **`form.ts` é a fonte de verdade do funil** (perguntas,
+Ideia central: **`funnel/steps.ts` é a fonte de verdade do funil** (perguntas,
 ordem, ramificações, texto que vai pro resumo) e **`Funnel.tsx` é só o
 motor** que interpreta esse array — navega entre steps, controla
-histórico/voltar, valida input e decide quando desqualificar ou finalizar.
+histórico/voltar, valida input e decide quando encerrar ou finalizar.
 Isso significa que a grande maioria dos pedidos de negócio (mudar uma
-pergunta, adicionar uma opção, mudar o critério de desqualificação, mudar o
-texto que vai para o WhatsApp) se resolve editando **só `form.ts` e/ou
+pergunta, adicionar uma opção, mudar o critério de encerramento, mudar o
+texto que vai para o WhatsApp) se resolve editando **só `funnel/steps.ts` e/ou
 `config.ts`**, sem tocar em `Funnel.tsx`.
 
 Não há chamadas de API, rotas de servidor (`route.ts`) nem página dinâmica
-— o site é 100% estático (compatível com `output: "export"`), e a única
-"integração externa" é o link `wa.me`.
+— o site é 100% estático (compatível com `output: "export"`), e as únicas
+"integrações externas" são os links `wa.me` (comercial e nutrição).
 
 ## Testes
 
-[src/lib/whatsapp.test.ts](src/lib/whatsapp.test.ts) cobre a parte com mais
-lógica e mais fácil de quebrar silenciosamente: captura de UTM, montagem da
-mensagem/link de WhatsApp e máscara/validação de telefone. Ao alterar
-`whatsapp.ts` ou `config.ts` (ex.: novo parâmetro de tracking), atualize os
-testes correspondentes.
+Cada módulo de `src/lib/` tem o seu `.test.ts` na mesma pasta: navegação do
+funil (`funnel/navigation.test.ts`), máscaras e validações (`input/*.test.ts`),
+captura de UTM (`tracking/utm.test.ts`) e montagem da mensagem/link de
+WhatsApp (`whatsapp/message.test.ts`). Ao alterar um módulo ou `config.ts`
+(ex.: novo parâmetro de tracking), atualize os testes correspondentes.
+
+## Documentação
+
+- [docs/arquitetura.md](docs/arquitetura.md) — camadas, fluxo, persistência e como alterar o formulário.
+- [docs/meta-pixel.md](docs/meta-pixel.md) — como trocar ou incluir o ID do Meta Pixel e testar.
+- [docs/perguntas.md](docs/perguntas.md) — contexto da Actum e o porquê de cada pergunta do funil.
