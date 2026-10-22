@@ -1,9 +1,0 @@
-{"timestamp":"00:00:00.483","source":"Server","level":"LOG","message":""}
-{"timestamp":"00:00:00.972","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
-{"timestamp":"00:04:23.734","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
-{"timestamp":"00:04:26.627","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
-{"timestamp":"00:04:39.315","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
-{"timestamp":"00:07:55.364","source":"Server","level":"LOG","message":"  Reload env: .env"}
-{"timestamp":"00:07:56.532","source":"Server","level":"LOG","message":"  Reload env: .env"}
-{"timestamp":"00:07:59.017","source":"Server","level":"LOG","message":"  Reload env: .env"}
-{"timestamp":"02:40:00.934","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
