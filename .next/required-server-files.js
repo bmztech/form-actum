@@ -105,7 +105,7 @@ self.__SERVER_FILES_MANIFEST={
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "/home/will/Companies/bmz/forms/form-actum",
+    "outputFileTracingRoot": "/home/rafaelrotto/github/form-actum",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -167,7 +167,7 @@ self.__SERVER_FILES_MANIFEST={
       "proxyPrefetch": "flexible",
       "optimisticClientCache": true,
       "manualClientBasePath": false,
-      "cpus": 7,
+      "cpus": 11,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
       "imgOptTimeoutInSeconds": 7,
@@ -304,11 +304,11 @@ self.__SERVER_FILES_MANIFEST={
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.ts",
     "turbopack": {
-      "root": "/home/will/Companies/bmz/forms/form-actum"
+      "root": "/home/rafaelrotto/github/form-actum"
     },
     "distDirRoot": ".next"
   },
-  "appDir": "/home/will/Companies/bmz/forms/form-actum",
+  "appDir": "/home/rafaelrotto/github/form-actum",
   "relativeAppDir": "",
   "files": [
     ".next/package.json",
