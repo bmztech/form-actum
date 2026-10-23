@@ -49,7 +49,7 @@ Você tem dois caminhos. O recomendado é o primeiro, porque deixa o ID versiona
 2. Atualize o `.env.example` para o mesmo ID, para os dois não divergirem de novo.
 3. Não mexa em mais nada. O `layout.tsx` lê a constante no script e no `noscript`.
 4. Rode `npm run lint`, `npm run test` e `npm run build`.
-5. Faça commit numa branch `feat/...` ou `fix/...`, abra o PR e publique o conteúdo novo de `out/`.
+5. Faça commit numa branch `feat/...` ou `fix/...`, abra o PR e, depois do merge, publique pela Hostinger.
 6. Siga a seção "Como testar".
 
 ### Opção B: por variável de ambiente
@@ -60,7 +60,7 @@ Você tem dois caminhos. O recomendado é o primeiro, porque deixa o ID versiona
     ```
 2. Gere o build de novo.
 
-O site é exportação estática (`output: "export"`). Variáveis `NEXT_PUBLIC_*` são **gravadas no JavaScript na hora do build**, não lidas em tempo de execução. Trocar a variável no servidor sem refazer o build não muda nada. Use esta opção para apontar um build de teste para um pixel de teste. Para produção, prefira a opção A.
+As páginas são pré-renderizadas no build. Variáveis `NEXT_PUBLIC_*` são **gravadas no JavaScript na hora do build**, não lidas em tempo de execução. Trocar a variável no servidor sem refazer o build não muda nada. Use esta opção para apontar um build de teste para um pixel de teste. Para produção, prefira a opção A.
 
 ## Incluir um segundo pixel
 

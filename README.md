@@ -13,8 +13,8 @@ lead abre o link `wa.me` com a mensagem pronta.
 - **Next.js 16** (App Router) + **React 19**, TypeScript.
 - **Tailwind CSS 4** para estilo.
 - **Vitest** + `jsdom` para testes unitários.
-- Build de **exportação estática** (`next.config.ts` usa `output: "export"`)
-  — o site final é HTML/CSS/JS estático, sem servidor Node em produção.
+- App Next.js servido por `next start` (Node) na Hostinger. As páginas são
+  pré-renderizadas como estáticas no build; não há rotas de servidor.
 
 ## Rodando localmente
 
@@ -24,13 +24,14 @@ npm run dev      # http://localhost:3000
 npm run test     # roda a suíte do Vitest uma vez
 npm run test:watch
 npm run lint
-npm run build     # gera o site estático em out/
+npm run build     # build de produção em .next/ (webpack)
+npm run start     # serve o build
 ```
 
-`npm run build` faz o build de produção e, por causa do `output: "export"`,
-já deixa o resultado pronto em `out/` — essa pasta pode ser hospedada em
-qualquer serviço de arquivos estáticos (Vercel, Netlify, S3, etc.), sem
-precisar rodar `next start`.
+O deploy é feito pela Hostinger a partir do GitHub (`main`): ela roda
+`npm run build` e `npm run start`. O build usa `--webpack` porque o Turbopack
+precisa abrir uma porta local para o PostCSS, o que o ambiente da Hostinger
+não permite.
 
 ## Regras de negócio
 
@@ -199,7 +200,7 @@ texto que vai para o WhatsApp) se resolve editando **só `funnel/steps.ts` e/ou
 `config.ts`**, sem tocar em `Funnel.tsx`.
 
 Não há chamadas de API, rotas de servidor (`route.ts`) nem página dinâmica
-— o site é 100% estático (compatível com `output: "export"`), e as únicas
+— o site é 100% estático (pré-renderizado no build), e as únicas
 "integrações externas" são os links `wa.me` (comercial e nutrição).
 
 ## Testes

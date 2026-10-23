@@ -7,7 +7,7 @@ Atualizado em 20/10/2026
 O form-actum é uma landing page com um funil de qualificação para a **Actum Precatórios**. O visitante responde perguntas curtas e, no final, abre o WhatsApp da Actum com uma mensagem já escrita, que contém as respostas e a origem da campanha (UTMs).
 
 - **Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind 4, Vitest.
-- **Build:** exportação estática (`output: "export"` em `next.config.ts`). O resultado é a pasta `out/`, com HTML, CSS e JS puros. Não há servidor Node em produção.
+- **Build:** `next build --webpack`, servido por `next start` na Hostinger. As páginas são pré-renderizadas como estáticas no build; não há rotas de servidor.
 - **Sem backend e sem banco.** O lead não é gravado em lugar nenhum pelo site. A entrega é o próprio lead enviando a mensagem no WhatsApp.
 - **Uma rota só:** `/`, que renderiza o componente `Funnel`.
 
@@ -214,10 +214,11 @@ npm install
 npm run dev       # http://localhost:3000
 npm run test      # Vitest
 npm run lint
-npm run build     # gera out/
+npm run build     # build em .next/ (webpack)
+npm run start     # serve o build
 ```
 
-Publique o conteúdo de `out/` em qualquer hospedagem de arquivos estáticos. Não use `next start`.
+A Hostinger faz o deploy a partir do GitHub (`main`) rodando `npm run build` e `npm run start`.
 
 | Teste | Cobre |
 | --- | --- |
