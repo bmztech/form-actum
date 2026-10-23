@@ -11,6 +11,9 @@
  *            -> objetivo -> nome -> telefone -> estado
  *            -> processo (opcional) -> aceites -> WhatsApp
  *
+ * O clique final no WhatsApp também envia o lead ao Banco de Leads (BI),
+ * via /api/lead-webhook (lib/lead-webhook.ts).
+ *
  * As telas de encerramento (A–F) ficam em lib/funnel/endings.ts. Só D e E
  * deixam voltar ao funil, pelo botão "Corrigir o valor informado".
  */
@@ -32,6 +35,7 @@ import type { Answers, Ending, Step } from "@/lib/funnel/types";
 import { validateStep } from "@/lib/funnel/validation";
 import { maskName } from "@/lib/input/name";
 import { maskPhone } from "@/lib/input/phone";
+import { buildLeadPayload, sendLeadWebhook } from "@/lib/lead-webhook";
 import { markSubmitted, useHasSubmitted } from "@/lib/submission/status";
 import { trackPixelEvent } from "@/lib/tracking/pixel";
 import { readTracking, type Tracking } from "@/lib/tracking/utm";
@@ -54,6 +58,7 @@ export default function Funnel() {
   const [nurtureUrl, setNurtureUrl] = useState<string>("");
 
   const tracking = useRef<Tracking>({});
+  const leadReported = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -80,6 +85,15 @@ export default function Funnel() {
     setWhatsAppUrl(buildWhatsAppUrl(finalAnswers, tracking.current));
     setScreen("done");
   }, []);
+
+  /** Envia o lead ao BI uma vez só, mesmo se o lead clicar de novo. */
+  const reportLead = useCallback(() => {
+    if (leadReported.current) return;
+    leadReported.current = true;
+    sendLeadWebhook(
+      buildLeadPayload(answers, tracking.current, window.location.href),
+    );
+  }, [answers]);
 
   const goTo = useCallback(
     (nextId: string, fromId: string, nextAnswers: Answers) => {
@@ -185,7 +199,8 @@ export default function Funnel() {
         <EndingScreen ending={ending} nurtureUrl={nurtureUrl} onRetry={retry} />
       );
     }
-    if (screen === "done") return <Done url={whatsAppUrl} />;
+    if (screen === "done")
+      return <Done url={whatsAppUrl} onWhatsAppClick={reportLead} />;
 
     const checked = draft ? draft.split(CONSENT_SEPARATOR) : [];
     const toggle = (value: string) => {
@@ -344,6 +359,7 @@ export default function Funnel() {
     ending,
     error,
     nurtureUrl,
+    reportLead,
     retry,
     screen,
     step,
@@ -514,7 +530,13 @@ function EndingScreen({
   );
 }
 
-function Done({ url }: { url: string }) {
+function Done({
+  url,
+  onWhatsAppClick,
+}: {
+  url: string;
+  onWhatsAppClick: () => void;
+}) {
   return (
     <div className="animate-step-in text-center">
       <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-sage/10 text-2xl">
@@ -540,6 +562,7 @@ function Done({ url }: { url: string }) {
         onClick={() => {
           trackPixelEvent("Lead");
           markSubmitted();
+          onWhatsAppClick();
         }}
         className="mt-7 inline-flex w-full items-center justify-center rounded-[3px] bg-gold px-8 py-4 text-lg font-semibold text-ink transition-colors hover:bg-gold-hover focus:outline-none focus-visible:ring-3 focus-visible:ring-gold/40 sm:w-auto"
       >
