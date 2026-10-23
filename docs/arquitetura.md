@@ -246,7 +246,7 @@ O proxy evita CORS e mantém o token fora do código do cliente. A API do BI é 
 | URL e token | `LEAD_WEBHOOK_URL` e `LEAD_WEBHOOK_TOKEN`, lidos a cada requisição. **Sem fallback no código.** |
 | Autenticação | Só o header `X-Webhook-Token`, a pedido do BI. O token nunca vai na URL: um `?token=` em `LEAD_WEBHOOK_URL` é removido. |
 | Body | Repassado sem validação nem transformação |
-| Timeout | 8 s, sem retry |
+| Timeout e retry | 8 s por tentativa. Uma nova tentativa em 5xx ou erro de rede (o BI deduplica por company + form + telefone, então não duplica). 401 e 422 não se repetem. |
 | Resposta | Sempre `204`, mesmo se o BI falhar ou faltar config. `400` se o corpo não for JSON. |
 
 Configuração: as duas variáveis ficam no painel da GoDaddy (modelo em `.env.example`). Sem qualquer uma delas, o lead não é enviado ao BI.
@@ -258,7 +258,8 @@ Logs no runtime da GoDaddy, todos com o prefixo `[lead-webhook]`:
 - `lead sem nome, telefone (form=actum)`: aviso; o lead segue para o BI mesmo assim
 - `corpo inválido, não é JSON`
 - `lead encaminhado — BI respondeu <status>`
-- `BI respondeu <status> <statusText>`
+- `BI respondeu <status> <statusText>: <corpo>`: o corpo vem truncado em 500 caracteres. No 422, ele traz o motivo (`form` não aceito para a empresa, `telefone` ausente etc.). 401 é token inválido ou ausente.
+- `nova tentativa (2/2)`
 - `falha ao encaminhar o lead pro BI: <erro>`
 
 ## Persistência no navegador
@@ -293,7 +294,7 @@ A GoDaddy faz o deploy a partir do GitHub (`main`) rodando `npm run build` e `np
 | `tracking/utm.test.ts` | Captura de UTMs, cobertura de `TRACKING_PARAMS`, storage indisponível |
 | `whatsapp/message.test.ts` | Headline, advogados separados, habilitação, observações, origem, links do lead e da nutrição |
 | `lead-webhook.test.ts` | Contrato do payload, telefone só dígitos, `null` sem nome/telefone, `keepalive` |
-| `app/api/lead-webhook/route.test.ts` | Token só no header (nunca na URL), config ausente, corpo inválido, falhas do BI, logs |
+| `app/api/lead-webhook/route.test.ts` | Token só no header (nunca na URL), config ausente, corpo inválido, motivo do 401/422 no log, nova tentativa só em 5xx e erro de rede |
 
 Cada teste fica ao lado do arquivo que testa. Ao mudar um módulo, atualize o `.test.ts` da mesma pasta.
 
