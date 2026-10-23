@@ -36,12 +36,12 @@ afterEach(() => {
 });
 
 describe("POST /api/lead-webhook", () => {
-  it("repassa o corpo ao BI com o token no header e na query", async () => {
+  it("repassa o corpo ao BI com o token só no header", async () => {
     const response = await POST(request(JSON.stringify(lead)));
 
     expect(response.status).toBe(204);
     const [target, init] = fetchMock.mock.calls[0];
-    expect(String(target)).toBe(`${URL_BI}?token=${TOKEN}`);
+    expect(String(target)).toBe(URL_BI);
     expect(init.method).toBe("POST");
     expect(init.headers).toEqual({
       "Content-Type": "application/json",
@@ -51,10 +51,10 @@ describe("POST /api/lead-webhook", () => {
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("não duplica o token quando a URL já traz um", async () => {
+  it("tira o token da URL quando a env traz um ?token=", async () => {
     vi.stubEnv("LEAD_WEBHOOK_URL", `${URL_BI}?token=${TOKEN}`);
     await POST(request(JSON.stringify(lead)));
-    expect(String(fetchMock.mock.calls[0][0])).toBe(`${URL_BI}?token=${TOKEN}`);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(URL_BI);
   });
 
   it("devolve 400 quando o corpo não é JSON", async () => {

@@ -2,7 +2,7 @@
  * Proxy do lead para o Banco de Leads (BI). Ver src/lib/lead-webhook.ts.
  *
  * Repassa o JSON recebido sem validar nem transformar, autenticando com
- * LEAD_WEBHOOK_TOKEN no header X-Webhook-Token e na query ?token=. Responde
+ * LEAD_WEBHOOK_TOKEN só no header X-Webhook-Token (nunca na URL). Responde
  * sempre 204 (o navegador já saiu para o WhatsApp), exceto corpo inválido (400).
  * Os logs com o prefixo [lead-webhook] aparecem no log de runtime da GoDaddy.
  */
@@ -58,7 +58,8 @@ export async function POST(request: Request): Promise<Response> {
     console.error(`${LOG} LEAD_WEBHOOK_URL não é uma URL válida`);
     return noContent();
   }
-  target.searchParams.set("token", config.token);
+  // O BI pediu o token só no header: remove um ?token= posto por engano na env.
+  target.searchParams.delete("token");
 
   try {
     const response = await fetch(target, {

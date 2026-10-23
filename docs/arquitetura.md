@@ -213,7 +213,7 @@ A única chamada HTTP própria é o envio ao BI. As outras saídas de rede são 
 ```
 [Navegador] clique em "Falar com a Actum agora"
    └─ POST /api/lead-webhook   (mesma origem, sem token, keepalive)
-        └─ [Servidor Next] POST $LEAD_WEBHOOK_URL?token=<TOKEN>
+        └─ [Servidor Next] POST $LEAD_WEBHOOK_URL
                            header X-Webhook-Token: <TOKEN>
 ```
 
@@ -244,7 +244,7 @@ O proxy evita CORS e mantém o token fora do código do cliente. A API do BI é 
 | Item | Valor |
 | --- | --- |
 | URL e token | `LEAD_WEBHOOK_URL` e `LEAD_WEBHOOK_TOKEN`, lidos a cada requisição. **Sem fallback no código.** |
-| Autenticação | Header `X-Webhook-Token` e query `?token=` (`searchParams.set`, não duplica) |
+| Autenticação | Só o header `X-Webhook-Token`, a pedido do BI. O token nunca vai na URL: um `?token=` em `LEAD_WEBHOOK_URL` é removido. |
 | Body | Repassado sem validação nem transformação |
 | Timeout | 8 s, sem retry |
 | Resposta | Sempre `204`, mesmo se o BI falhar ou faltar config. `400` se o corpo não for JSON. |
@@ -293,7 +293,7 @@ A GoDaddy faz o deploy a partir do GitHub (`main`) rodando `npm run build` e `np
 | `tracking/utm.test.ts` | Captura de UTMs, cobertura de `TRACKING_PARAMS`, storage indisponível |
 | `whatsapp/message.test.ts` | Headline, advogados separados, habilitação, observações, origem, links do lead e da nutrição |
 | `lead-webhook.test.ts` | Contrato do payload, telefone só dígitos, `null` sem nome/telefone, `keepalive` |
-| `app/api/lead-webhook/route.test.ts` | Token no header e na query, config ausente, corpo inválido, falhas do BI, logs |
+| `app/api/lead-webhook/route.test.ts` | Token só no header (nunca na URL), config ausente, corpo inválido, falhas do BI, logs |
 
 Cada teste fica ao lado do arquivo que testa. Ao mudar um módulo, atualize o `.test.ts` da mesma pasta.
 
