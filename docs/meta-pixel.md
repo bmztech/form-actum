@@ -49,7 +49,7 @@ Você tem dois caminhos. O recomendado é o primeiro, porque deixa o ID versiona
 2. Atualize o `.env.example` para o mesmo ID, para os dois não divergirem de novo.
 3. Não mexa em mais nada. O `layout.tsx` lê a constante no script e no `noscript`.
 4. Rode `npm run lint`, `npm run test` e `npm run build`.
-5. Faça commit numa branch `feat/...` ou `fix/...`, abra o PR e, depois do merge, publique pela Hostinger.
+5. Faça commit numa branch `feat/...` ou `fix/...`, abra o PR e, depois do merge, publique pela GoDaddy.
 6. Siga a seção "Como testar".
 
 ### Opção B: por variável de ambiente

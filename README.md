@@ -13,7 +13,7 @@ lead abre o link `wa.me` com a mensagem pronta.
 - **Next.js 16** (App Router) + **React 19**, TypeScript.
 - **Tailwind CSS 4** para estilo.
 - **Vitest** + `jsdom` para testes unitários.
-- App Next.js servido por `next start` (Node) na Hostinger. As páginas são
+- App Next.js servido por `next start` (Node) na GoDaddy. As páginas são
   pré-renderizadas como estáticas no build; não há rotas de servidor.
 
 ## Rodando localmente
@@ -28,10 +28,15 @@ npm run build     # build de produção em .next/ (webpack)
 npm run start     # serve o build
 ```
 
-O deploy é feito pela Hostinger a partir do GitHub (`main`): ela roda
+O deploy é feito pela GoDaddy a partir do GitHub (`main`): ela roda
 `npm run build` e `npm run start`. O build usa `--webpack` porque o Turbopack
-precisa abrir uma porta local para o PostCSS, o que o ambiente da Hostinger
+precisa abrir uma porta local para o PostCSS, o que o ambiente da GoDaddy
 não permite.
+
+A GoDaddy mantém um clone persistente do repositório e faz `git pull` a cada
+deploy. Por isso **nada gerado pelo build pode ser versionado** (`.next/`,
+`out/`): se o build alterar um arquivo versionado, o pull seguinte falha com
+"Your local changes to the following files would be overwritten by merge".
 
 ## Regras de negócio
 
