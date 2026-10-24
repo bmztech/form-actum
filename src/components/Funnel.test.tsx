@@ -109,6 +109,50 @@ describe("Funnel", () => {
     expect(message).toContain("Aceites: Aceito receber contato");
   });
 
+  it("envia o lead ao BI uma vez só, no clique do WhatsApp", () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    // jsdom não navega para o wa.me; evita o aviso "Not implemented: navigation".
+    container.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest("a")) e.preventDefault();
+    });
+
+    start();
+    click("RPV) já foi emitida");
+    click("INSS");
+    click("Sou o titular do processo");
+    click("De R$ 20.000 a R$ 59.999");
+    click("Preciso do dinheiro com urgência");
+    type("Maria da Silva");
+    click("Continuar");
+    type("11999998888");
+    click("Continuar");
+    choose("sp");
+    click("Continuar");
+    click("Pular esta etapa");
+    click("Aceito receber contato da Actum pelo WhatsApp");
+    click("Quero me conectar com um especialista");
+    click("Continuar");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    click("Falar com a Actum agora");
+    click("Falar com a Actum agora");
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/lead-webhook");
+    const payload = JSON.parse(init.body);
+    expect(payload).toMatchObject({
+      form: "actum",
+      nome: "Maria da Silva",
+      telefone: "11999998888",
+      respostas: { devedor: "inss", estado: "sp", aceites: "contato_whatsapp,especialista" },
+    });
+    expect(payload.mensagem).toContain("Novo lead: devedor INSS");
+    expect(localStorage.getItem("actum_submitted")).toBe("1");
+    vi.unstubAllGlobals();
+  });
+
   it("encerra na Mensagem C para tutor e não deixa voltar ao funil", () => {
     start();
     click("Não tenho certeza");

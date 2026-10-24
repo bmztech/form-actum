@@ -5,8 +5,9 @@ Precatórios**. O visitante responde a um questionário passo a passo e, no
 final, é direcionado ao WhatsApp da empresa com uma mensagem pré-preenchida
 contendo todas as respostas e os dados de rastreamento (UTM) da campanha.
 
-Não existe backend: tudo roda no navegador e a "conversão" acontece quando o
-lead abre o link `wa.me` com a mensagem pronta.
+O funil roda no navegador e a "conversão" acontece quando o lead abre o link
+`wa.me` com a mensagem pronta. No mesmo clique, o lead qualificado é enviado
+ao Banco de Leads (BI) por uma rota de servidor (`/api/lead-webhook`).
 
 ## Stack
 
@@ -14,7 +15,8 @@ lead abre o link `wa.me` com a mensagem pronta.
 - **Tailwind CSS 4** para estilo.
 - **Vitest** + `jsdom` para testes unitários.
 - App Next.js servido por `next start` (Node) na GoDaddy. As páginas são
-  pré-renderizadas como estáticas no build; não há rotas de servidor.
+  pré-renderizadas como estáticas no build; a única rota de servidor é
+  `/api/lead-webhook` (proxy para o BI).
 
 ## Rodando localmente
 
@@ -44,9 +46,9 @@ deploy. Por isso **nada gerado pelo build pode ser versionado** (`.next/`,
 
 Qualificar rapidamente se o lead **pode** ter o precatório antecipado (ou
 seja, vendido/adiantado pela Actum) e, se puder, capturar nome + WhatsApp
-para a equipe comercial dar continuidade **manualmente pelo WhatsApp**. Não
-há armazenamento de leads em banco de dados — a entrega do lead é o próprio
-lead enviando a mensagem do WhatsApp.
+para a equipe comercial dar continuidade **manualmente pelo WhatsApp**. A
+entrega do lead é o próprio lead enviando a mensagem do WhatsApp; uma cópia
+vai para o Banco de Leads (BI), ver a seção 9.
 
 ### 2. O funil (perguntas e ordem)
 
@@ -167,6 +169,23 @@ do botão final "Falar com a Actum agora"
 ([Funnel.tsx](src/components/Funnel.tsx)) — esse é o evento de conversão a
 ser otimizado nas campanhas do Meta Ads.
 
+### 9. Banco de Leads (BI)
+
+No clique em "Falar com a Actum agora", [sendLeadWebhook](src/lib/lead-webhook.ts)
+envia o lead para `/api/lead-webhook`, e a [rota servidor](src/app/api/lead-webhook/route.ts)
+repassa ao BI com o token. O navegador nunca vê o token.
+
+- **Só leads qualificados:** quem cai numa tela de encerramento (inclusive a
+  nutrição da Mensagem A) não é enviado.
+- **Uma vez por montagem do funil** (`useRef`); erros são ignorados e o
+  WhatsApp abre de qualquer jeito.
+- **`form: "actum"`** identifica a empresa e o produto no BI (multi-tenant).
+- **Configuração:** `LEAD_WEBHOOK_URL` e `LEAD_WEBHOOK_TOKEN` no painel da
+  GoDaddy. Não há fallback no código: sem as duas, o lead não é enviado e o
+  log de runtime registra qual variável está ausente.
+
+Contrato, logs e detalhes em [docs/arquitetura.md](docs/arquitetura.md#banco-de-leads-bi).
+
 ## Arquitetura
 
 ```
@@ -174,6 +193,7 @@ src/
   app/
     layout.tsx      – layout raiz, fonte (Poppins), metadata/SEO, viewport
     page.tsx         – única rota do site: renderiza <Funnel />
+    api/lead-webhook/route.ts – proxy servidor do lead para o BI
     globals.css      – tema Tailwind (cores "gold", "ink", "paper" etc.)
   components/
     Funnel.tsx       – motor do funil: estado, navegação, telas (intro,
@@ -191,6 +211,7 @@ src/
     format/            – formatação de valores em reais
     input/             – máscara e validação de nome e telefone
     tracking/          – UTMs (utm.ts) e Meta Pixel (pixel.ts)
+    lead-webhook.ts    – payload e envio do lead ao BI (cliente)
     whatsapp/          – montagem da mensagem e do link wa.me (message.ts)
     submission/        – flag local de "já enviou" (status.ts)
 ```
@@ -204,16 +225,17 @@ pergunta, adicionar uma opção, mudar o critério de encerramento, mudar o
 texto que vai para o WhatsApp) se resolve editando **só `funnel/steps.ts` e/ou
 `config.ts`**, sem tocar em `Funnel.tsx`.
 
-Não há chamadas de API, rotas de servidor (`route.ts`) nem página dinâmica
-— o site é 100% estático (pré-renderizado no build), e as únicas
-"integrações externas" são os links `wa.me` (comercial e nutrição).
+As páginas são estáticas (pré-renderizadas no build). A única rota de
+servidor é `/api/lead-webhook`, e as integrações externas são os links
+`wa.me` (comercial e nutrição) e o Banco de Leads (BI).
 
 ## Testes
 
 Cada módulo de `src/lib/` tem o seu `.test.ts` na mesma pasta: navegação do
 funil (`funnel/navigation.test.ts`), máscaras e validações (`input/*.test.ts`),
-captura de UTM (`tracking/utm.test.ts`) e montagem da mensagem/link de
-WhatsApp (`whatsapp/message.test.ts`). Ao alterar um módulo ou `config.ts`
+captura de UTM (`tracking/utm.test.ts`), montagem da mensagem/link de
+WhatsApp (`whatsapp/message.test.ts`), payload do BI (`lead-webhook.test.ts`)
+e a rota proxy (`app/api/lead-webhook/route.test.ts`). Ao alterar um módulo ou `config.ts`
 (ex.: novo parâmetro de tracking), atualize os testes correspondentes.
 
 ## Documentação

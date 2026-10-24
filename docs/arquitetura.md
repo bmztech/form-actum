@@ -1,17 +1,17 @@
 # Formulário Actum: arquitetura
 
-Atualizado em 20/10/2026
+Atualizado em 23/10/2026
 
 ## Visão geral
 
 O form-actum é uma landing page com um funil de qualificação para a **Actum Precatórios**. O visitante responde perguntas curtas e, no final, abre o WhatsApp da Actum com uma mensagem já escrita, que contém as respostas e a origem da campanha (UTMs).
 
 - **Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind 4, Vitest.
-- **Build:** `next build --webpack`, servido por `next start` na GoDaddy. As páginas são pré-renderizadas como estáticas no build; não há rotas de servidor.
-- **Sem backend e sem banco.** O lead não é gravado em lugar nenhum pelo site. A entrega é o próprio lead enviando a mensagem no WhatsApp.
-- **Uma rota só:** `/`, que renderiza o componente `Funnel`.
+- **Build:** `next build --webpack`, servido por `next start` na GoDaddy. As páginas são pré-renderizadas como estáticas no build. A única rota de servidor é `/api/lead-webhook`.
+- **Sem banco próprio.** A entrega é o próprio lead enviando a mensagem no WhatsApp. No mesmo clique, o lead qualificado é enviado ao Banco de Leads (BI) da BMZ, que é multi-tenant.
+- **Uma página só:** `/`, que renderiza o componente `Funnel`.
 
-Diferente do `form-main` (BMZ), aqui não há linktree, rodízio de números, webhook para BI nem TikTok Pixel. A estrutura é a do `form-main` reduzida a um único funil.
+Diferente do `form-main` (BMZ), aqui não há linktree, rodízio de números nem TikTok Pixel. A estrutura é a do `form-main` reduzida a um único funil. O envio ao BI segue o mesmo fluxo do form-previdenciário.
 
 ## Fluxo
 
@@ -29,11 +29,12 @@ flowchart TD
     H -- "clique em Falar com a Actum agora" --> I["Meta Pixel: Lead"]
     H -- clique --> J["localStorage: actum_submitted = 1"]
     H -- clique --> K["WhatsApp da Actum<br/>mensagem pronta"]
+    H -- clique --> L["POST /api/lead-webhook<br/>servidor repassa ao BI"]
 ```
 
 Quem cai numa tela de encerramento não vai para a fila comercial. A Mensagem A oferece a lista de nutrição. As Mensagens D e E deixam corrigir o valor. As outras são definitivas.
 
-O clique final faz três coisas juntas: dispara o `Lead`, marca o navegador como "já enviou" e abre o WhatsApp. A conversão só se completa quando o lead aperta "enviar" no app.
+O clique final faz quatro coisas juntas: dispara o `Lead`, marca o navegador como "já enviou", envia o lead ao BI e abre o WhatsApp. A conversão só se completa quando o lead aperta "enviar" no app.
 
 ## Estrutura de pastas
 
@@ -41,7 +42,10 @@ O clique final faz três coisas juntas: dispara o `Lead`, marca o navegador como
 src/
   app/
     layout.tsx            fonte Poppins, metadata (noindex), Meta Pixel
-    page.tsx              única rota: renderiza <Funnel />
+    page.tsx              única página: renderiza <Funnel />
+    api/lead-webhook/
+      route.ts            proxy servidor: repassa o lead ao BI com o token
+      route.test.ts       token, config ausente, falhas do BI
     globals.css           tema Tailwind (gold, ink, paper, slate, sage)
   components/
     Funnel.tsx            motor do funil + telas Intro, EndingScreen, Done, AlreadySubmitted
@@ -67,6 +71,7 @@ src/
       message.ts          buildMessage/buildWhatsAppUrl (lead), buildNurtureUrl (nutrição)
     submission/           estado entre visitas
       status.ts           flag "já enviou" no localStorage
+    lead-webhook.ts       payload do BI (buildLeadPayload) e envio (sendLeadWebhook)
 public/
   logo-actum.png
 docs/
@@ -89,6 +94,8 @@ docs/
 | `lib/tracking/*.ts` | Captura de UTMs (`utm.ts`) e eventos do pixel (`pixel.ts`) | Novo parâmetro vai em `config.ts`. Nova plataforma de anúncio entra aqui. |
 | `lib/whatsapp/message.ts` | Headline, corpo, observações e link `wa.me` do lead. Mensagem e link da nutrição. | Formato das mensagens |
 | `lib/submission/status.ts` | Flag "já enviou" e hook `useHasSubmitted` | Regra de reabrir o funil |
+| `lib/lead-webhook.ts` | Payload do lead para o BI e envio para a rota local | Campos enviados ao BI, valor de `form` |
+| `app/api/lead-webhook/route.ts` | Proxy servidor: token, timeout, logs | Autenticação e logs do BI |
 | `components/Funnel.tsx` | Máquina de telas, histórico e botão Voltar, barra de progresso, atalhos de teclado, textos das telas fixas | Textos de Intro, Final e Já enviado |
 | `app/layout.tsx` | Casca HTML, fonte, SEO e pixel | Título, descrição, código do pixel |
 
@@ -105,6 +112,8 @@ A regra é: `funnel/steps.ts` descreve, `funnel/navigation.ts` e `Funnel.tsx` ex
 | `funnel/validation` | `input/*`, `funnel/navigation` |
 | `tracking/utm` | `config` |
 | `whatsapp/message` | `config`, `funnel/*`, tipo `Tracking` de `tracking/utm` |
+| `lead-webhook` | `config`, `whatsapp/message`, tipos de `funnel/types` e `tracking/utm` |
+| `app/api/lead-webhook/route` | nada do projeto |
 | `input/*`, `format/*`, `tracking/pixel`, `submission/status` | nada do projeto |
 
 `funnel/` não conhece WhatsApp nem tracking, então dá para trocar o canal de entrega sem mexer nas perguntas. `input/`, `pixel.ts` e `submission/` não dependem de nada do projeto e podem ser copiados para outro formulário como estão. Os imports usam o caminho completo do arquivo (`@/lib/funnel/steps`), sem `index.ts`, para o import já dizer de onde vem cada coisa.
@@ -195,8 +204,63 @@ landing_page: https://.../
 | WhatsApp comercial | `whatsapp/message.ts`, `config.ts` (`WHATSAPP_NUMBER`) | Link `wa.me` do lead qualificado |
 | WhatsApp da nutrição | `whatsapp/message.ts`, `config.ts` (`NURTURE_WHATSAPP_NUMBER`) | Link `wa.me` da Mensagem A |
 | Site institucional | `config.ts` (`SITE_URL`) | Rodapé, telas de encerramento e tela de já enviado |
+| Banco de Leads (BI) | `lead-webhook.ts`, `app/api/lead-webhook/route.ts` | Lead qualificado, no clique final. Ver abaixo. |
 
-O site não faz nenhuma chamada HTTP própria. As únicas saídas de rede são o script do Meta e os links do WhatsApp.
+A única chamada HTTP própria é o envio ao BI. As outras saídas de rede são o script do Meta e os links do WhatsApp.
+
+## Banco de Leads (BI)
+
+```
+[Navegador] clique em "Falar com a Actum agora"
+   └─ POST /api/lead-webhook   (mesma origem, sem token, keepalive)
+        └─ [Servidor Next] POST $LEAD_WEBHOOK_URL
+                           header X-Webhook-Token: <TOKEN>
+```
+
+O proxy evita CORS e mantém o token fora do código do cliente. A API do BI é multi-tenant: o token e o campo `form` dizem de qual empresa e produto é o lead.
+
+### Quando envia
+
+- Só no clique do botão final (`Done`), depois de `trackPixelEvent("Lead")` e `markSubmitted()`. Quem chega à tela final e não clica não é enviado.
+- Só leads qualificados. As telas de encerramento, inclusive a nutrição da Mensagem A, não enviam.
+- Uma vez por montagem do funil (`useRef` `leadReported`). Erros são ignorados e o WhatsApp abre de qualquer jeito.
+
+### Payload
+
+| Campo | Valor |
+| --- | --- |
+| `form` | `"actum"` (`LEAD_FORM` em `lead-webhook.ts`) |
+| `pagina` | `window.location.href` no clique |
+| `clicadoEm` | ISO 8601 |
+| `nome` | `answers.nome` sem espaços nas pontas, ou `null` |
+| `telefone` | `answers.telefone` só com dígitos (DDD + número, sem 55), ou `null` |
+| `whatsappDestino` | `WHATSAPP_NUMBER` |
+| `mensagem` | `buildMessage()`, o mesmo texto do wa.me |
+| `respostas` | Respostas cruas (`value` interno), chave = id do step. Inclui `valor_anterior` quando houve correção e `aceites` separados por vírgula. |
+| `tracking` | O mesmo objeto de `readTracking()`: os 7 `TRACKING_PARAMS`, `referrer` e `landing_page`, só as chaves presentes |
+
+### Rota servidor
+
+| Item | Valor |
+| --- | --- |
+| URL e token | `LEAD_WEBHOOK_URL` e `LEAD_WEBHOOK_TOKEN`, lidos a cada requisição. **Sem fallback no código.** |
+| Autenticação | Só o header `X-Webhook-Token`, a pedido do BI. O token nunca vai na URL: um `?token=` em `LEAD_WEBHOOK_URL` é removido. |
+| Body | Repassado sem validação nem transformação |
+| Timeout e retry | 8 s por tentativa. Uma nova tentativa em 5xx ou erro de rede (o BI deduplica por company + form + telefone, então não duplica). 401 e 422 não se repetem. |
+| Resposta | Sempre `204`, mesmo se o BI falhar ou faltar config. `400` se o corpo não for JSON. |
+
+Configuração: as duas variáveis ficam no painel da GoDaddy (modelo em `.env.example`). Sem qualquer uma delas, o lead não é enviado ao BI.
+
+Logs no runtime da GoDaddy, todos com o prefixo `[lead-webhook]`:
+
+- `config ausente, lead não encaminhado (LEAD_WEBHOOK_URL=visível|AUSENTE LEAD_WEBHOOK_TOKEN=visível|AUSENTE)`
+- `LEAD_WEBHOOK_URL não é uma URL válida`
+- `lead sem nome, telefone (form=actum)`: aviso; o lead segue para o BI mesmo assim
+- `corpo inválido, não é JSON`
+- `lead encaminhado — BI respondeu <status>`
+- `BI respondeu <status> <statusText>: <corpo>`: o corpo vem truncado em 500 caracteres. No 422, ele traz o motivo (`form` não aceito para a empresa, `telefone` ausente etc.). 401 é token inválido ou ausente.
+- `nova tentativa (2/2)`
+- `falha ao encaminhar o lead pro BI: <erro>`
 
 ## Persistência no navegador
 
@@ -224,11 +288,13 @@ A GoDaddy faz o deploy a partir do GitHub (`main`) rodando `npm run build` e `np
 | --- | --- |
 | `funnel/navigation.test.ts` | Cada ramificação e encerramento das Etapas 1 a 6, rótulos gerados do teto da RPV, os 27 estados, `pathTotal` |
 | `funnel/validation.test.ts` | Estado obrigatório, os dois aceites, processo opcional, nome e telefone |
-| `components/Funnel.test.tsx` | Fluxos completos: Mensagem A com nutrição, correção na Mensagem D até o WhatsApp, Mensagem C definitiva, habilitação do cônjuge |
+| `components/Funnel.test.tsx` | Fluxos completos: Mensagem A com nutrição, correção na Mensagem D até o WhatsApp, Mensagem C definitiva, habilitação do cônjuge, envio único ao BI no clique final |
 | `input/name.test.ts` | Máscara e validação de nome |
 | `input/phone.test.ts` | Máscara e validação de telefone |
 | `tracking/utm.test.ts` | Captura de UTMs, cobertura de `TRACKING_PARAMS`, storage indisponível |
 | `whatsapp/message.test.ts` | Headline, advogados separados, habilitação, observações, origem, links do lead e da nutrição |
+| `lead-webhook.test.ts` | Contrato do payload, telefone só dígitos, `null` sem nome/telefone, `keepalive` |
+| `app/api/lead-webhook/route.test.ts` | Token só no header (nunca na URL), config ausente, corpo inválido, motivo do 401/422 no log, nova tentativa só em 5xx e erro de rede |
 
 Cada teste fica ao lado do arquivo que testa. Ao mudar um módulo, atualize o `.test.ts` da mesma pasta.
 
@@ -257,4 +323,5 @@ Cada teste fica ao lado do arquivo que testa. Ao mudar um módulo, atualize o `.
 - **Teto da RPV muda todo ano.** Troque `SALARIO_MINIMO` em `config.ts` em janeiro. Os testes conferem que opções e Mensagem E usam o mesmo valor.
 - **Prioridade (score) não implementada.** A tabela Alta/Média/Baixa do documento da Actum está em espera. Quando entrar, o lugar natural é uma função pura em `funnel/` e uma linha no bloco de observações.
 - **`Lead` não é mensagem enviada.** O pixel conta cliques. Compare com as conversas que chegam no WhatsApp.
+- **BI só recebe após configurar a GoDaddy.** Até `LEAD_WEBHOOK_URL` e `LEAD_WEBHOOK_TOKEN` estarem no painel, os leads não chegam ao BI (o log mostra `config ausente`). O valor `actum` precisa estar na lista de `form` autorizados da API.
 - **Dev dispara o pixel de produção.** Use pixel de teste no `.env.local` ou a aba Testar eventos.
