@@ -1,6 +1,6 @@
 # Meta Pixel: como incluir ou trocar o ID
 
-Atualizado em 19/10/2026
+Atualizado em 28/10/2026
 
 O formulário da Actum tem uma rota só (`/`) e um pixel só. Para trocar o ID, você edita uma constante (ou uma variável de ambiente) e gera um novo build. Este guia mostra onde, como testar e o que fazer se for preciso mais de um pixel.
 
@@ -15,18 +15,11 @@ O formulário da Actum tem uma rota só (`/`) e um pixel só. Para trocar o ID, 
 
 O ID é lido em um lugar só. O `layout.tsx` usa a mesma constante no script e no `noscript`, então não existe ID escrito direto no HTML.
 
-### Atenção: o ID atual precisa ser confirmado
+### ID atual
 
-Hoje o código e o `.env.example` apontam para IDs diferentes:
+O pixel da Actum é `1747237356474748`, e `config.ts` e `.env.example` usam o mesmo valor. Até 28/10/2026 o padrão do código era `1605537040923542`, o mesmo ID do site previdenciario.bmzadvogados.adv.br (repo `form-prev-mql-kommo`). Por isso os eventos da Actum anteriores a essa data podem ter caído no conjunto de dados da BMZ Previdenciário.
 
-| Onde | ID |
-| --- | --- |
-| Valor padrão em `src/lib/config.ts` (o que vai para produção sem `.env.local`) | `1605537040923542` |
-| `.env.example` | `1747237356474748` |
-
-O commit `e9aabd2` ("Update Meta Pixel ID to the Actum form pixel") trocou o padrão de `1747…` para `1605…`. Só que `1605537040923542` é o mesmo ID que o `form-main/docs/meta-pixel.md` registra para o site previdenciario.bmzadvogados.adv.br (repo `form-prev-mql-kommo`). Se os dois sites usarem o mesmo pixel, os eventos da Actum e da BMZ Previdenciário se misturam no mesmo conjunto de dados.
-
-Antes de qualquer campanha, confirme no Gerenciador de Eventos qual é o pixel da Actum. Depois deixe `config.ts` e `.env.example` com o mesmo valor. Se alguém copiar o `.env.example` para `.env.local` como ele está hoje, o build passa a usar `1747…` sem nenhum aviso.
+Se a variável `NEXT_PUBLIC_META_PIXEL_ID` estiver configurada no painel da GoDaddy, ela prevalece sobre o padrão do código. Deixe a variável vazia ou com o mesmo ID.
 
 ## Onde pegar o ID
 

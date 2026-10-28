@@ -318,7 +318,6 @@ Cada teste fica ao lado do arquivo que testa. Ao mudar um módulo, atualize o `.
 
 ## Pontos de atenção
 
-- **ID do pixel divergente.** `config.ts` usa `1605537040923542`, o mesmo ID registrado para o site previdenciário da BMZ. O `.env.example` usa `1747237356474748`. Confirme o pixel da Actum antes de rodar campanha. Detalhes em [meta-pixel.md](meta-pixel.md).
 - **Número da nutrição provisório.** `NURTURE_WHATSAPP_NUMBER` aponta para o comercial até a Actum definir outro. As mensagens chegam marcadas com `[NUTRIÇÃO]`, mas caem na mesma fila.
 - **Teto da RPV muda todo ano.** Troque `SALARIO_MINIMO` em `config.ts` em janeiro. Os testes conferem que opções e Mensagem E usam o mesmo valor.
 - **Prioridade (score) não implementada.** A tabela Alta/Média/Baixa do documento da Actum está em espera. Quando entrar, o lugar natural é uma função pura em `funnel/` e uma linha no bloco de observações.
